@@ -1,0 +1,5 @@
+/.crystal/
+/bin/
+/lib/
+/shard.lock
+*.dwarf

@@ -1,0 +1,10 @@
+rsa_type	ssh-rsa
+rsa_bits	2048
+ed25519_type	ssh-ed25519
+rsa_pub_type	ssh-rsa
+rsa_fp_md5	0b:20:6a:d8:ef:e3:73:5e:fb:8f:d7:01:f4:5b:94:0e
+rsa_fp_sha256	uIqg7L9laeWrJWrOR9bys5s6v3I+4sED9vExy1wN4oE=
+ed25519_pub_type	ssh-ed25519
+ed25519_fp_md5	c8:21:43:47:05:ef:c7:e8:73:b5:7d:59:4d:e7:b2:a3
+ed25519_fp_sha256	k9JY7BC2kDwlOo1Y9lZKh/g3nXj/9esJmyDDu2o1qrY=
+ed25519_ssh_keygen_l	256 SHA256:k9JY7BC2kDwlOo1Y9lZKh/g3nXj/9esJmyDDu2o1qrY= oracle@test

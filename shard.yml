@@ -1,0 +1,14 @@
+name: net_ssh_cr
+version: 0.1.0
+crystal: ">= 1.21.0"
+description: |
+  Порт net-ssh 7.3 API на Crystal поверх libssh2 (транспорт:
+  spider-gazelle/ssh2.cr). Net::SSH.start / exec! / scp — для подсистемы
+  управления VPN-серверами ~/qp2/website (app/services/vpn/*).
+
+authors:
+  - oleg
+
+dependencies:
+  ssh2:
+    github: spider-gazelle/ssh2.cr
