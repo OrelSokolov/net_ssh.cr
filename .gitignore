@@ -3,3 +3,4 @@
 /lib/
 /shard.lock
 *.dwarf
+/.live_sshd/

@@ -1,6 +1,9 @@
 rsa_type	ssh-rsa
 rsa_bits	2048
 ed25519_type	ssh-ed25519
+ed25519_fp_md5	c8:21:43:47:05:ef:c7:e8:73:b5:7d:59:4d:e7:b2:a3
+ed25519_enc_type	ssh-ed25519
+ed25519_enc_fp_md5	5d:d2:3d:0d:a6:20:14:0b:80:3f:7f:19:76:04:2e:76
 rsa_pub_type	ssh-rsa
 rsa_fp_md5	0b:20:6a:d8:ef:e3:73:5e:fb:8f:d7:01:f4:5b:94:0e
 rsa_fp_sha256	uIqg7L9laeWrJWrOR9bys5s6v3I+4sED9vExy1wN4oE=
@@ -8,3 +11,6 @@ ed25519_pub_type	ssh-ed25519
 ed25519_fp_md5	c8:21:43:47:05:ef:c7:e8:73:b5:7d:59:4d:e7:b2:a3
 ed25519_fp_sha256	k9JY7BC2kDwlOo1Y9lZKh/g3nXj/9esJmyDDu2o1qrY=
 ed25519_ssh_keygen_l	256 SHA256:k9JY7BC2kDwlOo1Y9lZKh/g3nXj/9esJmyDDu2o1qrY= oracle@test
+pbkdf_v1	c3d7ec5f693f16055b6d2f0af904795f79a924bbeb6fbdb805e82409d56d1e63
+pbkdf_v2	bf7c25b50bac67182b11812d2dcd316afae090ef299be334f62709f2274d76bce7204d1c3d3deacecc2ccdda9edb43ea
+pbkdf_v3	c6fb15928d86de8f24e06541bf96c49c07b208a802cbb8c4dbee44e1e8f7b4cbaf855c7c24144580dbf8199c88c6d1e02d96c66ad1c3599ef9fd5ebb9015b65c

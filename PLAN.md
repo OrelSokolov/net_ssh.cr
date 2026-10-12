@@ -57,9 +57,32 @@ Crystal 1.21 (`TCPSocket#wait_readable` удалён из API). Зафиксир
 ## Статус
 
 - [x] транспорт выбран, shard.yml
-- [x] oracle оффлайн-кейсы + expected.yml
-- [x] `SSHKey`: fingerprints/pub-парсер (совпадает с net-ssh KeyFactory)
-- [x] обёртка Session (start/exec!/exec/channel) поверх ssh.cr
-- [ ] SCP/SFTP
-- [ ] live-интеграция против sshd
-- [ ] bcrypt_pbkdf (зашифрованные ключи)
+- [x] oracle оффлайн-кейсы + expected.yml (вкл. pbkdf-векторы и зашифрованный
+      ed25519: 15 кейсов, 6/6 групп в spec)
+- [x] `SSHKey`: fingerprints/pub-парсер + `load_private_key` (PEM RSA через
+      собственный DER-парсер — `OpenSSL::PKey` из stdlib удалён; openssh-key-v1,
+      вкл. зашифрованные: bcrypt_pbkdf + aes*-ctr/cbc)
+- [x] обёртка Session (start/exec!/exec/channel, passphrase:, перебор ключей,
+      .pub рядом с ключом опционален — pubkey выводится libssh2)
+- [x] SCP/SFTP: `ssh.scp.upload!(local, remote)` / `download!(remote, local=nil
+      → в память)` поверх libssh2 scp (файлы; каталоги не поддержаны — сайту
+      не нужны), class-level `Net::SCP.upload!/download!`
+- [x] live-интеграция против localhost sshd: userspace-sshd БЕЗ root
+      (`oracle/live_sshd.sh`: apt-get download openssh-server → dpkg -x →
+      патч зашитых путей sshd-session/sshd-auth на /tmp/.lssh → unprivileged
+      sshd на 127.0.0.1:2222). Прогнано: ruby-oracle live (exec ×2, scp
+      round-trip) + crystal live_spec (exec, scp upload/download ×2, auth
+      зашифрованным ключом с passphrase) — все зелёные
+- [x] bcrypt_pbkdf: порт OpenBSD blowfish.c + bcrypt_pbkdf.c
+      (`src/net_ssh/blowfish_tables.cr` — таблицы сгенерированы из C,
+      `src/net_ssh/bcrypt_pbkdf.cr`); векторы против гема bcrypt_pbkdf 1.1
+      совпадают байт-в-байт (в expected.yml)
+
+## Известные ограничения
+
+- зашифрованные PEM RSA (Proc-Type: 4,ENCRYPTED) не читаются — openssh-формат
+  поддержан, PEM нужен незашифрованный (как в фикстурах сайта);
+- scp — только файлы (без рекурсии каталогов), sftp-подсистема — через
+  `ssh2.sftp_session` при необходимости;
+- `exec`-callback: stderr не стримится (is_stderr всегда false) — в call-сайтах
+  сайта не используется.

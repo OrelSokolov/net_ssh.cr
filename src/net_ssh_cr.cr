@@ -1,16 +1,20 @@
 # net_ssh_cr — порт net-ssh (7.3) API поверх libssh2.
 #
 # 1:1 к call-сайтам ~/qp2/website (app/services/vpn/*):
-#   Net::SSH.start(host, user, port: 22, keys: [...]) do |ssh|
+#   Net::SSH.start(host, user, port: 22, keys: [...], passphrase:) do |ssh|
 #     out = ssh.exec!("cmd")
 #     ssh.exec("cmd") { |bytes, is_stderr| ... }
-#     ssh.channel { |ch| ch.command("..."); ... }
+#     ssh.channel { |ch| ... }
+#     ssh.scp.upload!(local, remote) / ssh.scp.download!(remote)
 #   end
 #
-# Аутентификацию выполняет libssh2 (publickey/password).
+# Аутентификацию выполняет libssh2 (publickey/password); зашифрованные
+# openssh-ключи расшифровываются bcrypt_pbkdf (Net::SSH::KeyFactory).
 
 require "ssh2"
 require "./net_ssh/ssh_key"
+require "./net_ssh/bcrypt_pbkdf"
+require "./net_ssh/scp"
 
 module Net
   module SSH
@@ -30,9 +34,11 @@ module Net
         channel.command(command)
         output = IO::Memory.new
         buffer = Bytes.new(4096)
+        # libssh2 отдаёт данные до возврата 0 (EOF), поэтому выходим только
+        # по n == 0 — eof может прийти вместе с последним куском данных.
         loop do
           n = channel.read(buffer)
-          break if n.zero? || channel.eof?
+          break if n.zero?
           output.write(buffer[0, n])
         end
         status = channel.exit_status || 0
@@ -47,7 +53,7 @@ module Net
         buffer = Bytes.new(4096)
         loop do
           n = channel.read(buffer)
-          break if n.zero? || channel.eof?
+          break if n.zero?
           yield buffer[0, n], false
         end
         channel.close
@@ -60,6 +66,11 @@ module Net
         ch.close
       end
 
+      # net-scp: ssh.scp.upload!(local, remote) / ssh.scp.download!(remote)
+      def scp : SCP::SessionWrapper
+        SCP::SessionWrapper.new(self)
+      end
+
       def close
         @ssh2.disconnect
       end
@@ -69,9 +80,11 @@ module Net
     def self.start(host : String, user : String, port : Int32 = 22,
                    keys : Array(String) = [] of String,
                    password : String? = nil,
+                   passphrase : String? = nil,
                    timeout : Float64? = nil,
                    &block : Session -> _)
-      session = start(host, user, port: port, keys: keys, password: password, timeout: timeout)
+      session = start(host, user, port: port, keys: keys, password: password,
+        passphrase: passphrase, timeout: timeout)
       begin
         yield session
       ensure
@@ -82,24 +95,50 @@ module Net
     def self.start(host : String, user : String, port : Int32 = 22,
                    keys : Array(String) = [] of String,
                    password : String? = nil,
+                   passphrase : String? = nil,
                    timeout : Float64? = nil) : Session
       raw = SSH2::Session.connect(host, port)
       # Конструктор SSH2::Session уже делает handshake.
-      if key = keys.first?
-        # libssh2 ждёт приватный и публичный ключ ("<priv>.pub" рядом).
-        raw.login_with_pubkey(user, key, key + ".pub")
-      elsif pw = password
-        raw.login(user, pw)
-      else
-        raise ArgumentError.new("net-ssh: no auth method (keys: or password:)")
+      errors = [] of ::Exception
+      keys.each do |key|
+        # libssh2 сам парсит PEM/openssh-форматы и расшифровывает ключи
+        # по passphrase; .pub-файл рядом с ключом не обязателен (публичная
+        # часть выводится из приватного ключа).
+        pub_path = key + ".pub"
+        pubkey = File.exists?(pub_path) ? File.read(pub_path) : ""
+        begin
+          raw.login_with_data(user, File.read(key), pubkey, passphrase)
+          return Session.new(raw) if raw.authenticated?
+        rescue ex : SSH2::SSH2Error
+          errors << ex
+        end
       end
-      Session.new(raw)
+      if pw = password
+        begin
+          raw.login(user, pw)
+          return Session.new(raw) if raw.authenticated?
+        rescue ex : SSH2::SSH2Error
+          errors << ex
+        end
+      end
+      raw.disconnect
+      if errors.empty?
+        raise ArgumentError.new("net-ssh: no auth method (keys: or password:)")
+      else
+        raise errors.last
+      end
     end
 
     # Net::SSH::KeyFactory — парсинг ключей (см. net_ssh/ssh_key.cr).
     module KeyFactory
       def self.load_public_key(path : String) : SSHKey
         SSHKey.load_public_key(path)
+      end
+
+      # net-ssh: KeyFactory.load_private_key(path, passphrase = nil) —
+      # openssh-key-v1 (в т.ч. зашифрованный bcrypt_pbkdf) и PEM RSA.
+      def self.load_private_key(path : String, passphrase : String? = nil) : SSHKey
+        SSHKey.load_private_key(path, passphrase)
       end
     end
   end
